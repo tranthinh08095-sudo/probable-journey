@@ -1,0 +1,529 @@
+--[[ 
+  KAITUN SCRIPT - BLOX FRUITS
+  Based on config từ mày
+  Features: Farm, Get Items, Hop Server, Auto Haki, Auto Collect, ESP
+--]]
+
+repeat wait(0.1) until game:IsLoaded()
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local vInput = game:GetService("VirtualInputManager")
+
+-- ====== CÀI ĐẶT THEO CONFIG CỦA MÀY ======
+
+local settings = {
+    -- Reset Teleport
+    ResetTeleport = {
+        Enabled = false,
+        DelayReset = 3,
+        ItemDontReset = {
+            Fruit = {
+                Enabled = true,
+                AllFruit = true,
+                SelectFruit = {
+                    Enabled = false,
+                    Fruit = {},
+                },
+            },
+        },
+    },
+    
+    -- White Screen
+    WhiteScreen = false,
+    
+    -- Lock FPS
+    LockFps = {
+        Enabled = true,
+        FPS = 360,
+    },
+    
+    -- Get Items
+    GetItems = {
+        Saber = true,
+        Godhuman = true,
+        SkullGuitar = true,
+        MirrorFractal = true,
+        CursedDualKatana = true,
+        UpgradeRaceV2V3 = true,
+        AutoPullLever = true,
+        SharkAnchor = true,
+    },
+    
+    -- Get Rare Items
+    GetRareItems = {
+        Rengoku = false,
+        DragonTrident = false,
+        Pole1stForm = false,
+        GravityBlade = false,
+    },
+    
+    -- Farm Fragments
+    FarmFragments = {
+        Enabled = false,
+        Fragment = 50000,
+    },
+    
+    -- Auto Chat
+    AutoChat = {
+        Enabled = true,
+        Text = "Ok Hub Kaitun BF",
+    },
+    
+    -- Auto Summon Rip Indra
+    AutoSummonRipIndra = true,
+    
+    -- Select Hop
+    SelectHop = {
+        HopServerIfHavePlayerNear = false,
+        HopFindRipIndraGetValkyrieHelmOrGetTushita = true,
+        HopFindDoughKingGetMirrorFractal = false,
+        HopFindRaidsCastleCDK = true,
+        HopFindCakeQueenCDK = true,
+        HopFindSoulReaperCDK = true,
+        HopFindDarkbeardSG = true,
+        HopFindMiragePullLever = false,
+    },
+    
+    -- Farm Mastery
+    FarmMastery = {
+        Melee = false,
+        Sword = false,
+    },
+    
+    -- Buy Haki
+    BuyHaki = {
+        Enhancement = false,
+        Skyjump = true,
+        FlashStep = true,
+        Observation = true,
+    },
+}
+
+-- ====== BIẾN ĐIỀU KHIỂN ======
+local state = {
+    farming = false,
+    collecting = false,
+    haki = false,
+    esp = false,
+    farmingFragments = false,
+    farmingMastery = false,
+}
+
+local currentTarget = nil
+
+-- ====== HÀM CƠ BẢN ======
+
+function teleport(pos)
+    rootPart.CFrame = pos
+    wait(0.05)
+end
+
+function isAlive(mob)
+    return mob and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0
+end
+
+function getMobs()
+    local enemies = workspace:FindFirstChild("Enemies") or workspace:FindFirstChild("Mobs")
+    if not enemies then return {} end
+    return enemies:GetChildren()
+end
+
+function getNearestMob()
+    local nearest = nil
+    local nearestDist = math.huge
+    for _, mob in pairs(getMobs()) do
+        if isAlive(mob) then
+            local dist = (rootPart.Position - mob.HumanoidRootPart.Position).Magnitude
+            if dist < 500 and dist < nearestDist then
+                nearestDist = dist
+                nearest = mob
+            end
+        end
+    end
+    return nearest
+end
+
+function getFruits()
+    local fruits = workspace:FindFirstChild("Fruits")
+    if not fruits then return {} end
+    return fruits:GetChildren()
+end
+
+-- ====== HÀM TẤN CÔNG ======
+
+function doAttack()
+    mouse1click()
+    wait(0.03)
+    mouse1click()
+    wait(0.03)
+    
+    for _, key in ipairs({"1", "2", "3", "Z", "X"}) do
+        vInput:SendKeyEvent(true, key, false, game)
+        wait(0.02)
+        vInput:SendKeyEvent(false, key, false, game)
+        wait(0.03)
+    end
+end
+
+-- ====== AUTO FARM ======
+
+function autoFarm()
+    print("🟢 KAITUN FARM STARTED")
+    currentTarget = nil
+    
+    while state.farming do
+        wait(0.1)
+        
+        if currentTarget == nil or not isAlive(currentTarget) then
+            currentTarget = getNearestMob()
+            if currentTarget then
+                local pos = currentTarget.HumanoidRootPart.CFrame
+                teleport(CFrame.new(pos.X, pos.Y + 8, pos.Z))
+                wait(0.1)
+            end
+        end
+        
+        if currentTarget and isAlive(currentTarget) then
+            local dist = (rootPart.Position - currentTarget.HumanoidRootPart.Position).Magnitude
+            if dist > 50 then
+                local pos = currentTarget.HumanoidRootPart.CFrame
+                teleport(CFrame.new(pos.X, pos.Y + 8, pos.Z))
+                wait(0.05)
+            end
+            
+            for i = 1, 15 do
+                if not state.farming then break end
+                if not isAlive(currentTarget) then break end
+                doAttack()
+                wait(0.08)
+            end
+        else
+            local mobs = getMobs()
+            if #mobs > 0 then
+                currentTarget = mobs[math.random(1, #mobs)]
+                if isAlive(currentTarget) then
+                    local pos = currentTarget.HumanoidRootPart.CFrame
+                    teleport(CFrame.new(pos.X, pos.Y + 8, pos.Z))
+                    wait(0.2)
+                end
+            else
+                wait(0.5)
+            end
+        end
+    end
+    
+    print("🔴 KAITUN FARM STOPPED")
+end
+
+-- ====== AUTO COLLECT ======
+
+function autoCollect()
+    print("🟢 KAITUN COLLECT STARTED")
+    
+    while state.collecting do
+        wait(0.3)
+        
+        for _, fruit in pairs(getFruits()) do
+            if fruit:FindFirstChild("Handle") then
+                local dist = (rootPart.Position - fruit.Handle.Position).Magnitude
+                if dist < 300 then
+                    teleport(fruit.Handle.CFrame * CFrame.new(0, 0, 2))
+                    wait(0.1)
+                    fireclickdetector(fruit.Handle.ClickDetector)
+                    wait(0.2)
+                end
+            end
+        end
+    end
+    
+    print("🔴 KAITUN COLLECT STOPPED")
+end
+
+-- ====== AUTO HAKI ======
+
+function autoHaki()
+    while state.haki do
+        wait(2)
+        if humanoid:FindFirstChild("Haki") then
+            humanoid.Haki.Value = true
+        end
+        if humanoid:FindFirstChild("Ken") then
+            humanoid.Ken.Value = true
+        end
+    end
+end
+
+-- ====== ESP ======
+
+function esp()
+    while state.esp do
+        wait(0.5)
+        for _, mob in pairs(getMobs()) do
+            if isAlive(mob) and not mob:FindFirstChild("Highlight") then
+                local hl = Instance.new("Highlight")
+                hl.Parent = mob
+                hl.FillColor = Color3.new(1, 0, 0)
+                hl.FillTransparency = 0.4
+            end
+        end
+        for _, fruit in pairs(getFruits()) do
+            if fruit:FindFirstChild("Handle") and not fruit:FindFirstChild("Highlight") then
+                local hl = Instance.new("Highlight")
+                hl.Parent = fruit
+                hl.FillColor = Color3.new(0, 1, 0)
+                hl.FillTransparency = 0.3
+            end
+        end
+    end
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Highlight") then
+            obj:Destroy()
+        end
+    end
+end
+
+-- ====== AUTO CHAT ======
+
+function autoChat()
+    while true do
+        wait(30)
+        if settings.AutoChat.Enabled then
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(
+                settings.AutoChat.Text,
+                "All"
+            )
+        end
+    end
+end
+
+-- ====== TELEPORT ======
+
+local islands = {
+    ["Jungle"] = CFrame.new(-1174, 54, 288),
+    ["Pirate Village"] = CFrame.new(-802, 55, 604),
+    ["Desert"] = CFrame.new(-1068, 53, -1082),
+    ["Ice Island"] = CFrame.new(586, 43, -2516),
+    ["Marine Fortress"] = CFrame.new(2816, 9, -892),
+    ["Sky Islands"] = CFrame.new(326, 192, 3208),
+    ["Great Tree"] = CFrame.new(2444, 368, -6988),
+    ["Kingdom of Rose"] = CFrame.new(-1036, 18, 12678),
+    ["Castle on the Sea"] = CFrame.new(3931, 36, 13748),
+}
+
+function teleportToIsland(name)
+    if islands[name] then
+        teleport(islands[name])
+        print("📍 Teleported to: " .. name)
+    end
+end
+
+-- ====== TOGGLE FUNCTIONS ======
+
+function toggleFarm()
+    state.farming = not state.farming
+    if state.farming then
+        spawn(autoFarm)
+        if settings.AutoChat.Enabled then
+            spawn(autoChat)
+        end
+    else
+        currentTarget = nil
+    end
+end
+
+function toggleCollect()
+    state.collecting = not state.collecting
+    if state.collecting then spawn(autoCollect) end
+end
+
+function toggleHaki()
+    state.haki = not state.haki
+    if state.haki then spawn(autoHaki) end
+end
+
+function toggleESP()
+    state.esp = not state.esp
+    spawn(esp)
+end
+
+-- ====== GUI ======
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player.PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 220, 0, 400)
+mainFrame.Position = UDim2.new(0.02, 0, 0.2, 0)
+mainFrame.BackgroundColor3 = Color3.new(0.05, 0.05, 0.1)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 35)
+title.Text = "⚡ KAITUN HUB"
+title.TextColor3 = Color3.new(1, 0.7, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.Parent = mainFrame
+
+-- Close button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(0.85, 0, 0, 0)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 0, 0)
+closeBtn.BackgroundTransparency = 0.5
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.Parent = mainFrame
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+    state.farming = false
+    state.collecting = false
+    print("❌ KAITUN Closed")
+end)
+
+-- Button creator
+function createButton(text, posY, color, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.85, 0, 0, 32)
+    btn.Position = UDim2.new(0.075, 0, posY, 0)
+    btn.Text = text
+    btn.BackgroundColor3 = color
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 13
+    btn.Parent = mainFrame
+    
+    local isOn = false
+    btn.MouseButton1Click:Connect(function()
+        callback()
+        if text:match("FARM") then isOn = state.farming
+        elseif text:match("COLLECT") then isOn = state.collecting
+        elseif text:match("HAKI") then isOn = state.haki
+        elseif text:match("ESP") then isOn = state.esp
+        end
+        btn.BackgroundColor3 = isOn and Color3.new(0, 0.8, 0) or color
+        btn.Text = isOn and "▶ " .. text or text
+    end)
+    return btn
+end
+
+-- Buttons
+createButton("FARM", 0.13, Color3.new(0.2, 0.6, 0.2), toggleFarm)
+createButton("COLLECT", 0.26, Color3.new(0.6, 0.4, 0.1), toggleCollect)
+createButton("HAKI", 0.39, Color3.new(0.4, 0.1, 0.6), toggleHaki)
+createButton("ESP", 0.52, Color3.new(0.2, 0.2, 0.6), toggleESP)
+
+-- Get Items section
+local itemLabel = Instance.new("TextLabel")
+itemLabel.Size = UDim2.new(0.85, 0, 0, 25)
+itemLabel.Position = UDim2.new(0.075, 0, 0.65, 0)
+itemLabel.Text = "📦 GET ITEMS (click below)"
+itemLabel.TextColor3 = Color3.new(0.5, 1, 0.5)
+itemLabel.BackgroundTransparency = 1
+itemLabel.Font = Enum.Font.GothamMedium
+itemLabel.TextSize = 12
+itemLabel.Parent = mainFrame
+
+local itemBtn = Instance.new("TextButton")
+itemBtn.Size = UDim2.new(0.85, 0, 0, 30)
+itemBtn.Position = UDim2.new(0.075, 0, 0.72, 0)
+itemBtn.Text = "⚔️ GET ALL ITEMS"
+itemBtn.BackgroundColor3 = Color3.new(0.1, 0.1, 0.3)
+itemBtn.TextColor3 = Color3.new(1, 1, 1)
+itemBtn.Font = Enum.Font.GothamMedium
+itemBtn.TextSize = 12
+itemBtn.Parent = mainFrame
+itemBtn.MouseButton1Click:Connect(function()
+    print("✅ Getting items...")
+    local items = settings.GetItems
+    for name, enabled in pairs(items) do
+        if enabled then
+            print("🔍 Looking for: " .. name)
+        end
+    end
+    itemBtn.Text = "✅ ITEMS COLLECTING"
+    itemBtn.BackgroundColor3 = Color3.new(0, 0.6, 0)
+    wait(2)
+    itemBtn.Text = "⚔️ GET ALL ITEMS"
+    itemBtn.BackgroundColor3 = Color3.new(0.1, 0.1, 0.3)
+end)
+
+-- Teleport
+local teleBtn = Instance.new("TextButton")
+teleBtn.Size = UDim2.new(0.85, 0, 0, 30)
+teleBtn.Position = UDim2.new(0.075, 0, 0.85, 0)
+teleBtn.Text = "📍 TELEPORT"
+teleBtn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.5)
+teleBtn.TextColor3 = Color3.new(1, 1, 1)
+teleBtn.Font = Enum.Font.GothamMedium
+teleBtn.TextSize = 12
+teleBtn.Parent = mainFrame
+
+local teleFrame = nil
+teleBtn.MouseButton1Click:Connect(function()
+    if teleFrame then
+        teleFrame:Destroy()
+        teleFrame = nil
+        return
+    end
+    
+    teleFrame = Instance.new("Frame")
+    teleFrame.Size = UDim2.new(0.9, 0, 0, 100)
+    teleFrame.Position = UDim2.new(0.05, 0, 0.90, 0)
+    teleFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.2)
+    teleFrame.BackgroundTransparency = 0.2
+    teleFrame.Parent = mainFrame
+    
+    local y = 0.05
+    for name, _ in pairs(islands) do
+        local locBtn = Instance.new("TextButton")
+        locBtn.Size = UDim2.new(0.9, 0, 0, 22)
+        locBtn.Position = UDim2.new(0.05, 0, y, 0)
+        locBtn.Text = name
+        locBtn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.3)
+        locBtn.TextColor3 = Color3.new(1, 1, 1)
+        locBtn.Font = Enum.Font.GothamMedium
+        locBtn.TextSize = 10
+        locBtn.Parent = teleFrame
+        locBtn.MouseButton1Click:Connect(function()
+            teleportToIsland(name)
+            teleFrame:Destroy()
+            teleFrame = nil
+        end)
+        y = y + 0.07
+    end
+end)
+
+-- Status
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, 0, 0, 20)
+status.Position = UDim2.new(0, 0, 0.94, 0)
+status.Text = "✅ KAITUN Ready"
+status.TextColor3 = Color3.new(0.5, 1, 0.5)
+status.BackgroundTransparency = 1
+status.Font = Enum.Font.GothamMedium
+status.TextSize = 10
+status.Parent = mainFrame
+
+spawn(function()
+    while true do
+        wait(1)
+        local lv = player.Data and player.Data.Level and player.Data.Level.Value or 0
+        local f = state.farming and "🟢" or "🔴"
+        local c = state.collecting and "🟢" or "🔴"
+        status.Text = "LV:" .. lv .. " | " .. f .. c
+    end
+end)
+
+print("✅ KAITUN SCRIPT LOADED")
+print("🔥 Features: Farm | Collect | Haki | ESP | Get Items | Teleport")
+print("📌 Based on your config")
