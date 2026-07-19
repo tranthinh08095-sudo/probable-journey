@@ -1,0 +1,72 @@
+-- Boy Hub | Full Version - Professional
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "BOY HUB | ALL-IN-ONE",
+    SubTitle = "v3.0 - Full Features",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 450),
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- Configuration
+getgenv().BoyConfig = {
+    AutoFarm = false,
+    BringMob = false,
+    AutoSkill = true,
+    MobRange = 250,
+    HeightOffset = 10
+}
+
+-- Tabs
+local MainTab = Window:AddTab({ Title = "Farming", Icon = "sword" })
+local SettingsTab = Window:AddTab({ Title = "Settings", Icon = "settings" })
+
+-- Farming UI
+MainTab:AddToggle("AF", {Title = "Auto Farm Level (1-2800)", Default = false}):OnChanged(function(v) BoyConfig.AutoFarm = v end)
+MainTab:AddToggle("AS", {Title = "Auto Skill (Z,X,C)", Default = true}):OnChanged(function(v) BoyConfig.AutoSkill = v end)
+
+-- Settings UI
+SettingsTab:AddToggle("BM", {Title = "Bring Mobs (Range 250)", Default = false}):OnChanged(function(v) BoyConfig.BringMob = v end)
+
+-- Main Logic
+task.spawn(function()
+    while task.wait(0.1) do
+        if BoyConfig.AutoFarm then
+            pcall(function()
+                local Player = game.Players.LocalPlayer
+                local HRP = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+                
+                -- Auto Quest Logic (Simplified)
+                if not Player.PlayerGui.Main.Quest.Visible then
+                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", "BanditQuest1", 1) -- Thay tên Quest theo level
+                end
+                
+                -- Farming Logic
+                for _, Enemy in pairs(workspace.Enemies:GetChildren()) do
+                    if Enemy:FindFirstChild("HumanoidRootPart") and Enemy.Humanoid.Health > 0 then
+                        local Dist = (Enemy.HumanoidRootPart.Position - HRP.Position).Magnitude
+                        if Dist < BoyConfig.MobRange then
+                            -- Bring Mob
+                            if BoyConfig.BringMob then
+                                Enemy.HumanoidRootPart.CFrame = HRP.CFrame * CFrame.new(0, 0, 5)
+                            end
+                            -- Position on Top
+                            HRP.CFrame = Enemy.HumanoidRootPart.CFrame * CFrame.new(0, BoyConfig.HeightOffset, 0)
+                            -- Attack
+                            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AttackStart")
+                            -- Skills
+                            if BoyConfig.AutoSkill then
+                                for _, Key in pairs({"Z", "X", "C"}) do
+                                    game:GetService("VirtualInputManager"):SendKeyEvent(true, Key, false, game)
+                                end
+                            end
+                            break
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
