@@ -1,0 +1,524 @@
+--[[ 
+  BLOX FRUITS SCRIPT - FULL FEATURES
+  Features: Auto Farm, Auto Collect, Auto Haki, ESP, Teleport, Anti Fall
+  Version: 2.0 - Stable
+--]]
+
+repeat wait(0.1) until game:IsLoaded()
+
+-- ====== VARIABLES ======
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local vInput = game:GetService("VirtualInputManager")
+local runService = game:GetService("RunService")
+
+-- ====== SETTINGS ======
+local settings = {
+    FarmRadius = 400,
+    AttackDelay = 0.08,
+    CollectRadius = 200,
+    FlyHeight = 8,
+    UseSkills = true,
+    AutoHaki = true,
+    ESP = true,
+    AntiFall = true,
+}
+
+-- ====== CONTROL VARIABLES ======
+local state = {
+    farming = false,
+    collecting = false,
+    haki = false,
+    esp = false,
+    antiFall = false,
+}
+
+local threads = {
+    farm = nil,
+    collect = nil,
+}
+
+local currentTarget = nil
+
+-- ====== UTILITY ======
+
+function teleport(pos)
+    rootPart.CFrame = pos
+    wait(0.05)
+end
+
+function isAlive(mob)
+    return mob and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0
+end
+
+function getMobs()
+    local enemies = workspace:FindFirstChild("Enemies") or workspace:FindFirstChild("Mobs")
+    if not enemies then return {} end
+    return enemies:GetChildren()
+end
+
+function getNearestMob()
+    local nearest = nil
+    local nearestDist = math.huge
+    
+    for _, mob in pairs(getMobs()) do
+        if isAlive(mob) then
+            local dist = (rootPart.Position - mob.HumanoidRootPart.Position).Magnitude
+            if dist < settings.FarmRadius and dist < nearestDist then
+                nearestDist = dist
+                nearest = mob
+            end
+        end
+    end
+    return nearest
+end
+
+function getFruits()
+    local fruits = workspace:FindFirstChild("Fruits")
+    if not fruits then return {} end
+    return fruits:GetChildren()
+end
+
+-- ====== CORE FUNCTIONS ======
+
+function doAttack()
+    vInput:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+    wait(0.03)
+    vInput:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+    
+    if settings.UseSkills then
+        for _, key in ipairs({"1", "2", "3"}) do
+            vInput:SendKeyEvent(true, key, false, game)
+            wait(0.02)
+            vInput:SendKeyEvent(false, key, false, game)
+            wait(0.03)
+        end
+    end
+end
+
+function equipWeapon()
+    local backpack = player:FindFirstChild("Backpack")
+    if not backpack then return end
+    
+    local weapons = {}
+    for _, item in pairs(backpack:GetChildren()) do
+        if item:IsA("Tool") then
+            table.insert(weapons, item)
+        end
+    end
+    
+    if #weapons > 0 then
+        local weapon = weapons[1]
+        if not character:FindFirstChild(weapon.Name) then
+            weapon.Parent = character
+            wait(0.1)
+        end
+        -- Press 1,2,3 to switch
+        for i = 1, math.min(#weapons, 3) do
+            vInput:SendKeyEvent(true, tostring(i), false, game)
+            wait(0.05)
+            vInput:SendKeyEvent(false, tostring(i), false, game)
+        end
+    end
+end
+
+-- ====== AUTO FARM ======
+
+function autoFarm()
+    print("🟢 Auto Farm STARTED")
+    equipWeapon()
+    
+    while state.farming do
+        wait(0.1)
+        
+        if currentTarget == nil or not isAlive(currentTarget) then
+            currentTarget = getNearestMob()
+            if currentTarget then
+                local pos = currentTarget.HumanoidRootPart.CFrame
+                teleport(CFrame.new(pos.X, pos.Y + settings.FlyHeight, pos.Z))
+                wait(0.1)
+            end
+        end
+        
+        if currentTarget and isAlive(currentTarget) then
+            local mobPos = currentTarget.HumanoidRootPart.Position
+            local dist = (rootPart.Position - mobPos).Magnitude
+            local heightDiff = rootPart.Position.Y - mobPos.Y
+            
+            if dist > 50 or heightDiff < 2 then
+                local pos = currentTarget.HumanoidRootPart.CFrame
+                teleport(CFrame.new(pos.X, pos.Y + settings.FlyHeight, pos.Z))
+                wait(0.05)
+            end
+            
+            for i = 1, 10 do
+                if not state.farming then break end
+                if not isAlive(currentTarget) then break end
+                
+                doAttack()
+                wait(settings.AttackDelay)
+            end
+        else
+            local mobs = getMobs()
+            if #mobs > 0 then
+                currentTarget = mobs[math.random(1, #mobs)]
+                if isAlive(currentTarget) then
+                    local pos = currentTarget.HumanoidRootPart.CFrame
+                    teleport(CFrame.new(pos.X, pos.Y + settings.FlyHeight, pos.Z))
+                    wait(0.2)
+                end
+            else
+                wait(0.5)
+            end
+        end
+    end
+    
+    print("🔴 Auto Farm STOPPED")
+end
+
+-- ====== AUTO COLLECT ======
+
+function autoCollect()
+    print("🟢 Auto Collect STARTED")
+    
+    while state.collecting do
+        wait(0.3)
+        
+        for _, fruit in pairs(getFruits()) do
+            if fruit:FindFirstChild("Handle") then
+                local dist = (rootPart.Position - fruit.Handle.Position).Magnitude
+                if dist < settings.CollectRadius then
+                    teleport(fruit.Handle.CFrame * CFrame.new(0, 0, 2))
+                    wait(0.1)
+                    fireclickdetector(fruit.Handle.ClickDetector)
+                    wait(0.2)
+                end
+            end
+        end
+        
+        -- Check for fruits in workspace
+        for _, fruit in pairs(workspace:GetDescendants()) do
+            if fruit:IsA("Part") and fruit.Name:match("Fruit") then
+                local dist = (rootPart.Position - fruit.Position).Magnitude
+                if dist < settings.CollectRadius then
+                    teleport(fruit.CFrame * CFrame.new(0, 0, 2))
+                    wait(0.1)
+                    if fruit.Parent and fruit.Parent:FindFirstChild("ClickDetector") then
+                        fireclickdetector(fruit.Parent.ClickDetector)
+                    end
+                end
+            end
+        end
+    end
+    
+    print("🔴 Auto Collect STOPPED")
+end
+
+-- ====== AUTO HAKI ======
+
+function autoHaki()
+    while state.haki do
+        wait(2)
+        if humanoid:FindFirstChild("Haki") then
+            humanoid.Haki.Value = true
+        end
+        if humanoid:FindFirstChild("Ken") then
+            humanoid.Ken.Value = true
+        end
+    end
+end
+
+-- ====== ESP ======
+
+function esp()
+    while state.esp do
+        wait(0.5)
+        for _, mob in pairs(getMobs()) do
+            if isAlive(mob) and not mob:FindFirstChild("Highlight") then
+                local hl = Instance.new("Highlight")
+                hl.Parent = mob
+                hl.FillColor = Color3.new(1, 0, 0)
+                hl.FillTransparency = 0.4
+                hl.OutlineColor = Color3.new(1, 1, 1)
+            end
+        end
+        
+        for _, fruit in pairs(getFruits()) do
+            if fruit:FindFirstChild("Handle") and not fruit:FindFirstChild("Highlight") then
+                local hl = Instance.new("Highlight")
+                hl.Parent = fruit
+                hl.FillColor = Color3.new(0, 1, 0)
+                hl.FillTransparency = 0.3
+            end
+        end
+    end
+    
+    -- Clean up ESP when turned off
+    for _, mob in pairs(getMobs()) do
+        if mob:FindFirstChild("Highlight") then
+            mob.Highlight:Destroy()
+        end
+    end
+    for _, fruit in pairs(getFruits()) do
+        if fruit:FindFirstChild("Highlight") then
+            fruit.Highlight:Destroy()
+        end
+    end
+end
+
+-- ====== ANTI FALL ======
+
+function antiFall()
+    while state.antiFall do
+        wait(0.1)
+        if rootPart.Position.Y < -50 then
+            teleport(CFrame.new(0, 100, 0))
+        end
+    end
+end
+
+-- ====== TELEPORT ======
+
+local islands = {
+    ["Jungle"] = CFrame.new(-1174, 54, 288),
+    ["Pirate Village"] = CFrame.new(-802, 55, 604),
+    ["Desert"] = CFrame.new(-1068, 53, -1082),
+    ["Ice Island"] = CFrame.new(586, 43, -2516),
+    ["Marine Fortress"] = CFrame.new(2816, 9, -892),
+    ["Sky Islands"] = CFrame.new(326, 192, 3208),
+    ["Great Tree"] = CFrame.new(2444, 368, -6988),
+    ["Kingdom of Rose"] = CFrame.new(-1036, 18, 12678),
+    ["Castle on the Sea"] = CFrame.new(3931, 36, 13748),
+}
+
+function teleportToIsland(name)
+    if islands[name] then
+        teleport(islands[name])
+        print("📍 Teleported to: " .. name)
+        return true
+    end
+    return false
+end
+
+-- ====== TOGGLE FUNCTIONS ======
+
+function toggleFarm()
+    state.farming = not state.farming
+    if state.farming then
+        if threads.farm then coroutine.close(threads.farm) end
+        threads.farm = spawn(autoFarm)
+    else
+        if threads.farm then
+            coroutine.close(threads.farm)
+            threads.farm = nil
+        end
+        currentTarget = nil
+    end
+end
+
+function toggleCollect()
+    state.collecting = not state.collecting
+    if state.collecting then
+        if threads.collect then coroutine.close(threads.collect) end
+        threads.collect = spawn(autoCollect)
+    else
+        if threads.collect then
+            coroutine.close(threads.collect)
+            threads.collect = nil
+        end
+    end
+end
+
+function toggleHaki()
+    state.haki = not state.haki
+    if state.haki then
+        spawn(autoHaki)
+    end
+end
+
+function toggleESP()
+    state.esp = not state.esp
+    spawn(esp)
+end
+
+function toggleAntiFall()
+    state.antiFall = not state.antiFall
+    if state.antiFall then
+        spawn(antiFall)
+    end
+end
+
+-- ====== GUI ======
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player.PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 200, 0, 350)
+mainFrame.Position = UDim2.new(0.02, 0, 0.2, 0)
+mainFrame.BackgroundColor3 = Color3.new(0.05, 0.05, 0.1)
+mainFrame.BackgroundTransparency = 0.15
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "⚡ FULL SCRIPT"
+title.TextColor3 = Color3.new(1, 0.7, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.Parent = mainFrame
+
+-- Close button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 25, 0, 25)
+closeBtn.Position = UDim2.new(0.85, 0, 0, 0)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 0, 0)
+closeBtn.BackgroundTransparency = 0.5
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.Parent = mainFrame
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+    state.farming = false
+    state.collecting = false
+    print("❌ Script closed")
+end)
+
+-- Minimize button
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 25, 0, 25)
+minBtn.Position = UDim2.new(0.7, 0, 0, 0)
+minBtn.Text = "━"
+minBtn.TextColor3 = Color3.new(1, 1, 1)
+minBtn.BackgroundTransparency = 0.5
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 16
+minBtn.Parent = mainFrame
+
+local minimized = false
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    mainFrame.Size = minimized and UDim2.new(0, 200, 0, 30) or UDim2.new(0, 200, 0, 350)
+    for _, child in pairs(mainFrame:GetChildren()) do
+        if child ~= title and child ~= minBtn and child ~= closeBtn then
+            child.Visible = not minimized
+        end
+    end
+end)
+
+-- Button creator
+function createToggleButton(text, posY, color, toggleFunc)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.85, 0, 0, 30)
+    btn.Position = UDim2.new(0.075, 0, posY, 0)
+    btn.Text = text
+    btn.BackgroundColor3 = color
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 12
+    btn.Parent = mainFrame
+    
+    local stateVal = false
+    btn.MouseButton1Click:Connect(function()
+        toggleFunc()
+        -- Find matching state
+        if text:match("FARM") then stateVal = state.farming
+        elseif text:match("COLLECT") then stateVal = state.collecting
+        elseif text:match("HAKI") then stateVal = state.haki
+        elseif text:match("ESP") then stateVal = state.esp
+        elseif text:match("ANTI FALL") then stateVal = state.antiFall
+        end
+        
+        if stateVal then
+            btn.BackgroundColor3 = Color3.new(0, 0.8, 0)
+            btn.Text = "▶ " .. text
+        else
+            btn.BackgroundColor3 = color
+            btn.Text = text
+        end
+    end)
+    return btn
+end
+
+createToggleButton("FARM", 0.12, Color3.new(0.2, 0.6, 0.2), toggleFarm)
+createToggleButton("COLLECT", 0.24, Color3.new(0.6, 0.4, 0.1), toggleCollect)
+createToggleButton("HAKI", 0.36, Color3.new(0.4, 0.1, 0.6), toggleHaki)
+createToggleButton("ESP", 0.48, Color3.new(0.2, 0.2, 0.6), toggleESP)
+createToggleButton("ANTI FALL", 0.60, Color3.new(0.1, 0.4, 0.6), toggleAntiFall)
+
+-- Teleport button
+local teleBtn = Instance.new("TextButton")
+teleBtn.Size = UDim2.new(0.85, 0, 0, 30)
+teleBtn.Position = UDim2.new(0.075, 0, 0.72, 0)
+teleBtn.Text = "📍 TELEPORT"
+teleBtn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.5)
+teleBtn.TextColor3 = Color3.new(1, 1, 1)
+teleBtn.Font = Enum.Font.GothamMedium
+teleBtn.TextSize = 12
+teleBtn.Parent = mainFrame
+
+local teleFrame = nil
+teleBtn.MouseButton1Click:Connect(function()
+    if teleFrame then
+        teleFrame:Destroy()
+        teleFrame = nil
+        return
+    end
+    
+    teleFrame = Instance.new("Frame")
+    teleFrame.Size = UDim2.new(0.9, 0, 0, 100)
+    teleFrame.Position = UDim2.new(0.05, 0, 0.80, 0)
+    teleFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.2)
+    teleFrame.BackgroundTransparency = 0.2
+    teleFrame.Parent = mainFrame
+    
+    local y = 0.05
+    for name, _ in pairs(islands) do
+        local locBtn = Instance.new("TextButton")
+        locBtn.Size = UDim2.new(0.9, 0, 0, 22)
+        locBtn.Position = UDim2.new(0.05, 0, y, 0)
+        locBtn.Text = name
+        locBtn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.3)
+        locBtn.TextColor3 = Color3.new(1, 1, 1)
+        locBtn.Font = Enum.Font.GothamMedium
+        locBtn.TextSize = 10
+        locBtn.Parent = teleFrame
+        locBtn.MouseButton1Click:Connect(function()
+            teleportToIsland(name)
+            teleFrame:Destroy()
+            teleFrame = nil
+        end)
+        y = y + 0.07
+    end
+end)
+
+-- Status
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, 0, 0, 20)
+status.Position = UDim2.new(0, 0, 0.92, 0)
+status.Text = "✅ Ready"
+status.TextColor3 = Color3.new(0.5, 1, 0.5)
+status.BackgroundTransparency = 1
+status.Font = Enum.Font.GothamMedium
+status.TextSize = 10
+status.Parent = mainFrame
+
+-- Update status
+spawn(function()
+    while true do
+        wait(1)
+        local lv = player.Data and player.Data.Level and player.Data.Level.Value or 0
+        local f = state.farming and "🟢" or "🔴"
+        local c = state.collecting and "🟢" or "🔴"
+        status.Text = "LV:" .. lv .. " | " .. f .. " " .. c
+    end
+end)
+
+print("✅ FULL SCRIPT LOADED!")
+print("🔥 Features: Farm | Collect | Haki | ESP | Anti Fall | Teleport")
