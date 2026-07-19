@@ -1,0 +1,233 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "BANANA CAT HUB : Blox Fruits",
+    SubTitle = "by Boy",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(550, 380),
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- --- FIX 1: MOBILE TOGGLE BUTTON TRỰC TIẾP ẨN/HIỆN MENU ---
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+ScreenGui.Name = "BananaCatToggle"
+ScreenGui.Parent = game.CoreGui
+
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleButton.Position = UDim2.new(0.12, 0, 0.15, 0)
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "BOY"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 0)
+ToggleButton.TextSize = 18.000
+
+UICorner.CornerRadius = UDim.new(0, 50)
+UICorner.Parent = ToggleButton
+
+-- Sửa lỗi bật/tắt bằng cách can thiệp thẳng vào trạng thái Minimize của Window
+ToggleButton.MouseButton1Click:Connect(function()
+    if Window then
+        Window:Minimize()
+    end
+end)
+
+-- --- CONFIGURATION TABLE ---
+getgenv().Config = {
+    AutoFarm = false, BringMob = false,
+    AutoChest = false, AutoSeaBeast = false,
+    Weapon = "Melee", AutoBuyStyle = "None"
+}
+
+local p = game.Players.LocalPlayer
+local rem = game:GetService("ReplicatedStorage").Remotes.CommF_
+
+-- --- CREATE TABS ---
+local Tabs = {
+    Farm = Window:AddTab({ Title = "Farm", Icon = "rbxassetid://4483345906" }),
+    Fighting = Window:AddTab({ Title = "Fighting Style", Icon = "rbxassetid://4483345906" }),
+    Items = Window:AddTab({ Title = "Items", Icon = "rbxassetid://4483345906" }),
+    SeaEvents = Window:AddTab({ Title = "Sea Events", Icon = "rbxassetid://4483345906" }),
+    Config = Window:AddTab({ Title = "Config", Icon = "rbxassetid://4483345906" })
+}
+
+-- --- FARM TAB ---
+Tabs.Farm:AddToggle("AutoFarm", {Title = "Auto Farm Level", Default = false}):OnChanged(function(v) getgenv().Config.AutoFarm = v end)
+Tabs.Farm:AddToggle("BringMob", {Title = "Bring Mob", Default = false}):OnChanged(function(v) getgenv().Config.BringMob = v end)
+
+-- --- FIGHTING STYLE TAB ---
+local DropdownStyle = Tabs.Fighting:AddDropdown("SelectStyle", {
+    Title = "Select Fighting Style to Buy",
+    Values = {"None", "Black Leg", "Electro", "Fishman Kung Fu", "Dragon Breath", "Superhuman", "Death Step", "Sharkman Karate", "Electric Claw", "Godhuman", "Sanguine Art"},
+    CurrentValue = "None"
+})
+DropdownStyle:OnChanged(function(val) getgenv().Config.AutoBuyStyle = val end)
+
+-- --- ITEMS TAB ---
+Tabs.Items:AddToggle("AutoChest", {Title = "Auto Collect Chest", Default = false}):OnChanged(function(v) getgenv().Config.AutoChest = v end)
+
+-- --- SEA EVENTS TAB ---
+Tabs.SeaEvents:AddToggle("AutoSeaBeast", {Title = "Auto Attack Sea Beast", Default = false}):OnChanged(function(v) getgenv().Config.AutoSeaBeast = v end)
+
+-- --- CONFIG TAB ---
+local DropdownWeapon = Tabs.Config:AddDropdown("WeaponSelect", {
+    Title = "Select Weapon",
+    Values = {"Melee", "Sword", "Gun"},
+    CurrentValue = "Melee"
+})
+DropdownWeapon:OnChanged(function(val) getgenv().Config.Weapon = val end)
+
+-- --- AUTO EQUIP WEAPON ---
+local function equip()
+    pcall(function()
+        for _, v in pairs(p.Backpack:GetChildren()) do
+            if v:IsA("Tool") and v.ToolTip == getgenv().Config.Weapon then
+                p.Character.Humanoid:EquipTool(v)
+            end
+        end
+    end)
+end
+
+-- --- FIX 2: TỰ ĐỘNG PHÂN TÍCH LEVEL ĐỂ ĐI FARM (HỖ TRỢ LEVEL 1941 Ở SEA 3) ---
+local function getQuestData()
+    local lvl = p.Data.Level.Value
+    
+    -- Kiểm tra nếu đang ở Sea 3
+    if game.PlaceId == 7405815058 or lvl >= 1500 then
+        if lvl >= 1900 and lvl < 1975 then
+            return "IceCreamZombieQuest", "Ice Cream Zombie", 1
+        elseif lvl >= 1975 and lvl < 2000 then
+            return "IceCreamZombieQuest", "Ice Cream Zombie", 2
+        else
+            return "PiratePortQuest", "Pirate Millionaire", 1
+        end
+    -- Kiểm tra nếu đang ở Sea 2
+    elseif game.PlaceId == 4442272163 then
+        if lvl >= 1200 and lvl < 1250 then
+            return "LavaPirateQuest", "Lava Pirate", 1
+        else
+            return "Area1Quest", "Raider", 1
+        end
+    -- Mặc định Sea 1
+    else
+        return "BanditQuest1", "Bandit", 1
+    end
+end
+
+-- --- BACKEND LOOPS ---
+
+-- 1. Auto Farm Level Loop
+task.spawn(function()
+    while task.wait(0.1) do
+        if getgenv().Config.AutoFarm and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            pcall(function()
+                local qName, mName, qId = getQuestData()
+                
+                -- Tự động nhận nhiệm vụ nếu chưa có
+                if not p.PlayerGui.Main.Quest.Visible then 
+                    rem:InvokeServer("StartQuest", qName, qId) 
+                end
+                
+                -- Tìm quái để đập
+                local hasMob = false
+                for _, e in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
+                    if e.Name == mName and e:FindFirstChild("HumanoidRootPart") and e.Humanoid.Health > 0 then
+                        hasMob = true
+                        equip()
+                        p.Character.HumanoidRootPart.CFrame = e.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+                        rem:InvokeServer("AttackStart")
+                    end
+                end
+                
+                -- Nếu không thấy quái ở Workspace, tự động bay tới khu vực hồi sinh của quái đó
+                if not hasMob then
+                    local mobSpawn = game:GetService("Workspace").EnemySpawns:FindFirstChild(mName)
+                    if mobSpawn then
+                        p.Character.HumanoidRootPart.CFrame = mobSpawn.CFrame
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 2. Bring Mob Loop
+task.spawn(function()
+    while task.wait(0.1) do
+        if getgenv().Config.BringMob and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            pcall(function()
+                local _, mName, _ = getQuestData()
+                for _, v in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
+                    if v.Name == mName and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                        if (v.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude <= 350 then
+                            v.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, -5, 0)
+                            v.HumanoidRootPart.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 3. Auto Buy Fighting Style Loop
+task.spawn(function()
+    while task.wait(1) do
+        local style = getgenv().Config.AutoBuyStyle
+        if style ~= "None" then
+            pcall(function()
+                if style == "Black Leg" then rem:InvokeServer("BuyBlackLeg")
+                elseif style == "Electro" then rem:InvokeServer("BuyElectro")
+                elseif style == "Fishman Kung Fu" then rem:InvokeServer("BuyFishmanKungFu")
+                elseif style == "Dragon Breath" then rem:InvokeServer("BlackbeardReward", "DarkStep", "1")
+                elseif style == "Superhuman" then rem:InvokeServer("BuySuperhuman")
+                elseif style == "Death Step" then rem:InvokeServer("BuyDeathStep")
+                elseif style == "Sharkman Karate" then rem:InvokeServer("BuySharkmanKarate")
+                elseif style == "Electric Claw" then rem:InvokeServer("BuyElectricClaw")
+                elseif style == "Godhuman" then rem:InvokeServer("BuyGodhuman")
+                elseif style == "Sanguine Art" then rem:InvokeServer("BuySanguineArt")
+                end
+            end)
+        end
+    end
+end)
+
+-- 4. Auto Collect Chest Loop
+task.spawn(function()
+    while task.wait(0.5) do
+        if getgenv().Config.AutoChest and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            pcall(function()
+                for _, c in pairs(game:GetService("Workspace"):GetChildren()) do
+                    if c:IsA("Model") and string.find(c.Name, "Chest") and c:FindFirstChild("Base") then
+                        p.Character.HumanoidRootPart.CFrame = c.Base.CFrame
+                        task.wait(0.2)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 5. Auto Sea Beast Loop
+task.spawn(function()
+    while task.wait(0.5) do
+        if getgenv().Config.AutoSeaBeast and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            pcall(function()
+                local sb = game:GetService("Workspace"):FindFirstChild("SeaBeast") or game:GetService("Workspace").Enemies:FindFirstChild("Sea Beast")
+                if sb and sb:FindFirstChild("HumanoidRootPart") and sb.Humanoid.Health > 0 then
+                    equip()
+                    p.Character.HumanoidRootPart.CFrame = sb.HumanoidRootPart.CFrame * CFrame.new(0, 20, 0)
+                    rem:InvokeServer("AttackStart")
+                end
+            end)
+        end
+    end
+end)
+
+Window:SelectTab(Tabs.Farm)
+Fluent:Notify({ Title = "BOY HUB", Content = "FIXED ALL BUGS! Ready to play.", Duration = 5 })
