@@ -1,0 +1,7 @@
+-- [[ Nai Hub Script ]] --
+pcall(function()
+    local url = game.GameId == 10200395747 and "https://raw.githubusercontent.com/realkidhub/Games/refs/heads/main/GaG2.lua" or "https://raw.githubusercontent.com/realkidhub/Games/refs/heads/main/BloxFruits.lua"
+    
+    print("[Nai Hub]: Dang tai script...")
+    loadstring(game:HttpGet(url))()
+end)
