@@ -1,9 +1,0 @@
-pcall(function()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Nai Hub",
-        Text = "Loading menu...",
-        Duration = 5
-    })
-    
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/tranthinh08095-sudo/probable-journey/refs/heads/main/Nai"))()
-end)
