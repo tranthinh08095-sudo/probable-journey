@@ -1,0 +1,4 @@
+-- [[ Nai Hub ]] --
+repeat task.wait() until game:IsLoaded()
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/realkidhub/Games/refs/heads/main/BloxFruits.lua"))()
