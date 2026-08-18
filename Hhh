@@ -1,0 +1,109 @@
+-- Main.lua
+-- Roblox Studio / LocalScript
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- =========================
+-- CONFIG
+-- =========================
+
+local DEFAULT_SPEED = 16
+local FAST_SPEED = 50
+local DEFAULT_JUMP = 50
+local HIGH_JUMP = 100
+
+local SpeedEnabled = false
+local JumpEnabled = false
+local NoclipEnabled = false
+
+-- =========================
+-- CHARACTER
+-- =========================
+
+local Character
+local Humanoid
+local Root
+
+local function LoadCharacter(char)
+    Character = char
+    Humanoid = char:WaitForChild("Humanoid")
+    Root = char:WaitForChild("HumanoidRootPart")
+
+    Humanoid.WalkSpeed = SpeedEnabled and FAST_SPEED or DEFAULT_SPEED
+    Humanoid.JumpPower = JumpEnabled and HIGH_JUMP or DEFAULT_JUMP
+end
+
+if Player.Character then
+    LoadCharacter(Player.Character)
+end
+
+Player.CharacterAdded:Connect(LoadCharacter)
+
+-- =========================
+-- GUI
+-- =========================
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "BloxStyleHub"
+Gui.ResetOnSpawn = false
+Gui.Parent = PlayerGui
+
+-- Nút tròn
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "OpenButton"
+OpenButton.Size = UDim2.fromOffset(60, 60)
+OpenButton.Position = UDim2.new(0, 25, 0.5, -30)
+OpenButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+OpenButton.Text = "☰"
+OpenButton.TextColor3 = Color3.new(1,1,1)
+OpenButton.TextSize = 25
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.Parent = Gui
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(1, 0)
+ButtonCorner.Parent = OpenButton
+
+local ButtonStroke = Instance.new("UIStroke")
+ButtonStroke.Thickness = 2
+ButtonStroke.Color = Color3.fromRGB(80,80,80)
+ButtonStroke.Parent = OpenButton
+
+-- =========================
+-- MAIN FRAME
+-- =========================
+
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.fromOffset(330, 400)
+Main.Position = UDim2.new(0.5, -165, 0.5, -200)
+Main.BackgroundColor3 = Color3.fromRGB(18,18,18)
+Main.Visible = false
+Main.Parent = Gui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 14)
+MainCorner.Parent = Main
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 2
+MainStroke.Color = Color3.fromRGB(60,60,60)
+MainStroke.Parent = Main
+
+-- =========================
+-- TITLE
+-- =========================
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -60, 0, 50)
+Title.Position = UDim2.fromOffset(15, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "BloxStyle Hub"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.TextSize = 20
+Title.Font = Enum.Font.GothamBold
