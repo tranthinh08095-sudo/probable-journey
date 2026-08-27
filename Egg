@@ -1,0 +1,9 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+
+for speed = 1, 1000 do
+    Humanoid.WalkSpeed = speed
+    task.wait(0.01)
+end
