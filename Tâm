@@ -1,0 +1,16 @@
+local url = "https://raw.githubusercontent.com/tranthinh08095-sudo/probable-journey/refs/heads/main/Egg"
+
+local success, response = pcall(function()
+    return game:HttpGet(url)
+end)
+
+if success and response ~= "404: Not Found" and response ~= "" then
+    local scriptFunc, err = loadstring(response)
+    if scriptFunc then
+        scriptFunc()
+    else
+        warn("Lỗi code Lua trong script:", err)
+    end
+else
+    warn("Đéo tải được script! Link hỏng hoặc file bị xóa/private.")
+end
