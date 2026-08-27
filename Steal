@@ -1,0 +1,20 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local function setSpeed(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    
+    -- Tăng tốc độ từ 1 đến 1000
+    for speed = 1, 1000 do
+        humanoid.WalkSpeed = speed
+        task.wait(0.01)
+    end
+end
+
+-- Chạy ngay nếu nhân vật đã load
+if LocalPlayer.Character then
+    task.spawn(setSpeed, LocalPlayer.Character)
+end
+
+-- Tự chạy lại mỗi khi nhân vật hồi sinh
+LocalPlayer.CharacterAdded:Connect(setSpeed)
