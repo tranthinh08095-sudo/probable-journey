@@ -1,0 +1,48 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("LENNON HUB - Steal An Egg", "DarkTheme")
+
+local MainTab = Window:NewTab("Main")
+local MainSection = MainTab:NewSection("Auto Egg & Speed")
+
+-- Cố định Speed 1000
+game:GetService("RunService").Stepped:Connect(function()
+    pcall(function()
+        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 1000
+        end
+    end)
+end)
+
+-- Auto TP cướp trứng & về base
+local autoSteal = false
+MainSection:NewToggle("Auto Steal Egg", "Tự động TP cướp trứng rồi bay về", function(state)
+    autoSteal = state
+    task.spawn(function()
+        while autoSteal do
+            pcall(function()
+                local char = game.Players.LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                
+                -- Tìm trứng của người chơi khác (workspace)
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if not autoSteal then break end
+                    if obj:IsA("BasePart") and (obj.Name:lower():find("egg") or obj.Parent.Name:lower():find("egg")) then
+                        if hrp then
+                            -- Lưu vị trí cũ / Base
+                            local oldPos = hrp.CFrame
+                            
+                            -- TP tới trứng
+                            hrp.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                            task.wait(0.3)
+                            
+                            -- TP bay về lại vị trí cũ
+                            hrp.CFrame = oldPos
+                            task.wait(1)
+                        end
+                    end
+                end
+            end)
+            task.wait(0.5)
+        end
+    end)
+end)
