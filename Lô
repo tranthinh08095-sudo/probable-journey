@@ -1,0 +1,90 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "LENNON HUB - Steal An Egg",
+    SubTitle = "",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 340),
+    Acrylic = false,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "" })
+}
+
+local Section = Tabs.Main:AddSection("Auto Egg & Speed")
+
+local AutoSteal = false
+
+-- Hàm quét lấy tên Pet xịn nhất trong Server
+local function GetBestPetInServer()
+    local bestPetName = "Không tìm thấy"
+    local highestValue = -1
+
+    for _, player in pairs(game.Players:GetPlayers()) do
+        -- Duyệt qua Backpack hoặc Pet folder của người chơi
+        local container = player:FindFirstChild("Backpack") or player:FindFirstChild("Pets")
+        if container then
+            for _, item in pairs(container:GetChildren()) do
+                -- Lấy giá trị/sức mạnh pet (nếu có attribute hoặc con số trong name)
+                local val = item:FindFirstChild("Value") or item:FindFirstChild("Power")
+                if val and typeof(val.Value) == "number" then
+                    if val.Value > highestValue then
+                        highestValue = val.Value
+                        bestPetName = item.Name .. " (" .. player.Name .. ")"
+                    end
+                elseif item:IsA("Tool") or item:IsA("Model") then
+                    if highestValue == -1 then
+                        bestPetName = item.Name .. " (" .. player.Name .. ")"
+                    end
+                end
+            end
+        end
+    end
+    return bestPetName
+end
+
+-- Hiển thị thông tin Pet xịn nhất
+local PetParagraph = Section:AddParagraph({
+    Title = "Best Pet in Server:",
+    Content = GetBestPetInServer()
+})
+
+-- Tự động cập nhật tên Pet mỗi 5 giây
+task.spawn(function()
+    while task.wait(5) do
+        PetParagraph:SetDesc(GetBestPetInServer())
+    end
+end)
+
+-- Toggle Auto Steal Egg (Gửi Remote trực tiếp, không di chuyển nhân vật)
+Section:AddToggle("AutoStealEgg", {
+    Title = "Auto Steal Egg",
+    Default = false,
+    Callback = function(Value)
+        AutoSteal = Value
+        if AutoSteal then
+            task.spawn(function()
+                while AutoSteal do
+                    -- Tìm Remote Event cướp trứng trong ReplicatedStorage
+                    local stealRemote = game:GetService("ReplicatedStorage"):FindFirstChild("StealEgg", true) 
+                        or game:GetService("ReplicatedStorage"):FindFirstChild("Steal", true)
+                        or game:GetService("ReplicatedStorage"):FindFirstChild("EggSteal", true)
+                    
+                    if stealRemote then
+                        for _, target in pairs(game.Players:GetPlayers()) do
+                            if target ~= game.Players.LocalPlayer then
+                                stealRemote:FireServer(target)
+                            end
+                        end
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Window:SelectTab(1)
