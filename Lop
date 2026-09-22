@@ -1,0 +1,153 @@
+-- Remove existing UI if running
+if game.CoreGui:FindFirstChild("LennonHubUI") then
+    game.CoreGui.LennonHubUI:Destroy()
+end
+
+-- Create Lennon Hub UI
+local LennonUI = Instance.new("ScreenGui")
+LennonUI.Name = "LennonHubUI"
+LennonUI.Parent = game.CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 280, 0, 160)
+MainFrame.Position = UDim2.new(0.5, -140, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = LennonUI
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+-- Title Bar
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -30, 0, 30)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.Text = "🛡️ LENNON HUB"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.SourceSansBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.Parent = MainFrame
+
+-- Close / Minimize Button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseBtn.Position = UDim2.new(1, -28, 0, 3)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
+CloseBtn.TextSize = 14
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Parent = MainFrame
+
+CloseBtn.MouseButton1Click:Connect(function()
+    LennonUI:Destroy()
+end)
+
+-- Best Pet Info
+local PetTitle = Instance.new("TextLabel")
+PetTitle.Size = UDim2.new(1, -20, 0, 20)
+PetTitle.Position = UDim2.new(0, 10, 0, 32)
+PetTitle.Text = "BEST PET: Mama Lunar Dragon (245.8M)"
+PetTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+PetTitle.TextSize = 12
+PetTitle.Font = Enum.Font.SourceSans
+PetTitle.TextXAlignment = Enum.TextXAlignment.Left
+PetTitle.BackgroundTransparency = 1
+PetTitle.Parent = MainFrame
+
+-- Teleport Button
+local TeleBtn = Instance.new("TextButton")
+TeleBtn.Size = UDim2.new(0, 140, 0, 35)
+TeleBtn.Position = UDim2.new(0, 10, 0, 60)
+TeleBtn.Text = "TELEPORT"
+TeleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+TeleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleBtn.TextSize = 12
+TeleBtn.Font = Enum.Font.SourceSansBold
+TeleBtn.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = TeleBtn
+
+-- Loop Toggle Button
+local LoopBtn = Instance.new("TextButton")
+LoopBtn.Size = UDim2.new(0, 100, 0, 35)
+LoopBtn.Position = UDim2.new(0, 160, 0, 60)
+LoopBtn.Text = "LOOP: OFF"
+LoopBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+LoopBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+LoopBtn.TextSize = 12
+LoopBtn.Font = Enum.Font.SourceSansBold
+LoopBtn.Parent = MainFrame
+
+local LoopCorner = Instance.new("UICorner")
+LoopCorner.CornerRadius = UDim.new(0, 6)
+LoopCorner.Parent = LoopBtn
+
+-- Steal Logic
+local function DoSteal()
+    local lp = game.Players.LocalPlayer
+    local char = lp.Character
+    if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
+
+    local oldPos = char.HumanoidRootPart.CFrame
+
+    for _, target in pairs(game.Players:GetPlayers()) do
+        if target ~= lp and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            -- Teleport to target outside safezone
+            char.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+            task.wait(0.2)
+            
+            -- Trigger Tool or Remote
+            local tool = lp.Backpack:FindFirstChildOfClass("Tool") or char:FindFirstChildOfClass("Tool")
+            if tool then
+                tool.Parent = char
+                tool:Activate()
+            end
+            
+            local stealRemote = game:GetService("ReplicatedStorage"):FindFirstChild("StealEgg", true) 
+                or game:GetService("ReplicatedStorage"):FindFirstChild("Steal", true)
+            if stealRemote then
+                stealRemote:FireServer(target)
+            end
+            
+            task.wait(0.3)
+            -- Return to original position
+            char.HumanoidRootPart.CFrame = oldPos
+            break
+        end
+    end
+end
+
+-- Teleport Button Action
+TeleBtn.MouseButton1Click:Connect(function()
+    DoSteal()
+end)
+
+-- Loop Button Action
+local IsLooping = false
+LoopBtn.MouseButton1Click:Connect(function()
+    IsLooping = not IsLooping
+    if IsLooping then
+        LoopBtn.Text = "LOOP: ON"
+        LoopBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 80)
+        LoopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        
+        task.spawn(function()
+            while IsLooping do
+                DoSteal()
+                task.wait(1.5)
+            end
+        end)
+    else
+        LoopBtn.Text = "LOOP: OFF"
+        LoopBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        LoopBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+end)
